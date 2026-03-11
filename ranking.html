@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PLC Training Game - World Ranking</title>
+
+<style>
+
+/* FONDO */
+
+body{
+background:radial-gradient(circle at center,#0b0f14,#000);
+color:#00ff7b;
+font-family:monospace;
+text-align:center;
+margin:0;
+padding:40px 20px;
+}
+
+/* TITULO */
+
+h1{
+font-size:32px;
+letter-spacing:3px;
+margin-bottom:10px;
+text-shadow:0 0 15px #00ff7b;
+}
+
+.subtitle{
+color:#aaa;
+margin-bottom:30px;
+}
+
+/* TROFEO MASTER */
+
+#champion{
+
+max-width:420px;
+margin:auto;
+margin-bottom:25px;
+
+background:#000;
+border:3px solid gold;
+
+border-radius:10px;
+
+padding:15px;
+
+box-shadow:
+0 0 25px gold,
+inset 0 0 10px rgba(255,215,0,0.4);
+
+animation:champGlow 1.5s infinite alternate;
+
+}
+
+@keyframes champGlow{
+
+from{box-shadow:0 0 20px gold}
+to{box-shadow:0 0 35px gold}
+
+}
+
+.championTitle{
+font-size:14px;
+color:gold;
+margin-bottom:5px;
+}
+
+.championName{
+font-size:22px;
+font-weight:bold;
+}
+
+.championScore{
+font-size:18px;
+}
+
+/* PANEL RANKING */
+
+#ranking{
+
+max-width:420px;
+margin:auto;
+
+background:#000;
+
+border:3px solid #00ff7b;
+
+border-radius:10px;
+
+padding:15px;
+
+box-shadow:
+0 0 25px #00ff7b,
+inset 0 0 15px rgba(0,255,120,0.2);
+
+}
+
+/* FILAS */
+
+.rank{
+
+display:flex;
+justify-content:space-between;
+
+padding:10px;
+
+margin:5px 0;
+
+border-bottom:1px solid #222;
+
+opacity:0;
+transform:translateY(10px);
+
+animation:rankIn .5s forwards;
+
+}
+
+/* ANIMACION */
+
+@keyframes rankIn{
+
+to{
+opacity:1;
+transform:translateY(0);
+}
+
+}
+
+/* MEDALLAS */
+
+.rank1{
+color:gold;
+font-size:18px;
+text-shadow:0 0 10px gold;
+}
+
+.rank2{
+color:silver;
+}
+
+.rank3{
+color:#cd7f32;
+}
+
+/* NOMBRE */
+
+.name{
+text-align:left;
+flex:1;
+}
+
+/* SCORE */
+
+.score{
+font-weight:bold;
+}
+
+/* EFECTO CRT */
+
+body::after{
+
+content:"";
+position:fixed;
+top:0;
+left:0;
+width:100%;
+height:100%;
+
+background:linear-gradient(
+rgba(255,255,255,0.03) 50%,
+transparent 50%
+);
+
+background-size:100% 4px;
+
+pointer-events:none;
+
+}
+
+/* FOOTER */
+
+.footer{
+
+margin-top:25px;
+font-size:12px;
+color:#777;
+
+}
+
+/* MOBILE */
+
+@media(max-width:600px){
+
+h1{
+font-size:24px;
+}
+
+.championName{
+font-size:18px;
+}
+
+.rank{
+font-size:14px;
+}
+
+}
+
+</style>
+
+</head>
+
+<body>
+
+<h1>🏆 PLC TRAINING GAME</h1>
+<div class="subtitle">WORLD RANKING</div>
+
+<!-- CAMPEON -->
+
+<div id="champion"></div>
+
+<!-- TOP 10 -->
+
+<div id="ranking"></div>
+
+<div class="footer">
+Ranking global en tiempo real
+</div>
+
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
+import { getFirestore, collection, query, orderBy, limit, onSnapshot } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
+
+/* FIREBASE */
+
+const firebaseConfig={
+apiKey:"AIzaSyCHD_4dYcJjRYw1LvMm03iDLNyktjOgIR4",
+authDomain:"plc-training-game.firebaseapp.com",
+projectId:"plc-training-game",
+storageBucket:"plc-training-game.firebasestorage.app",
+messagingSenderId:"444769439771",
+appId:"1:444769439771:web:253d9651ebef96ab9ba8be"
+}
+
+const app=initializeApp(firebaseConfig)
+const db=getFirestore(app)
+
+/* QUERY */
+
+const q=query(
+collection(db,"ranking"),
+orderBy("score","desc"),
+limit(10)
+)
+
+/* RANKING REALTIME */
+
+onSnapshot(q,(snapshot)=>{
+
+let html=""
+let championHTML=""
+
+let i=0
+
+snapshot.forEach((doc)=>{
+
+let r=doc.data()
+
+if(i==0){
+
+championHTML=`
+<div class="championTitle">👑 PLC MASTER</div>
+<div class="championName">${r.name}</div>
+<div class="championScore">${r.score}</div>
+`
+
+}
+
+let medal=""
+let cls="rank"
+
+if(i==0){medal="🥇";cls+=" rank1"}
+if(i==1){medal="🥈";cls+=" rank2"}
+if(i==2){medal="🥉";cls+=" rank3"}
+
+html+=`
+<div class="${cls}" style="animation-delay:${i*0.1}s">
+<span class="name">${medal} ${r.name}</span>
+<span class="score">${r.score}</span>
+</div>
+`
+
+i++
+
+})
+
+document.getElementById("ranking").innerHTML=html
+document.getElementById("champion").innerHTML=championHTML
+
+})
+
+</script>
+
+</body>
+</html>
