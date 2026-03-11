@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+<meta charset="UTF-8">
+<title>Clean Ranking</title>
+</head>
+
+<body>
+
+<h2>Cleaning ranking...</h2>
+
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
+import { getFirestore, collection, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
+
+const firebaseConfig={
+apiKey:"AIzaSyCHD_4dYcJjRYw1LvMm03iDLNyktjOgIR4",
+authDomain:"plc-training-game.firebaseapp.com",
+projectId:"plc-training-game",
+storageBucket:"plc-training-game.firebasestorage.app",
+messagingSenderId:"444769439771",
+appId:"1:444769439771:web:253d9651ebef96ab9ba8be"
+}
+
+const app=initializeApp(firebaseConfig)
+const db=getFirestore(app)
+
+async function cleanRanking(){
+
+let snapshot=await getDocs(collection(db,"ranking"))
+
+let bestScores={}
+let docs=[]
+
+snapshot.forEach(d=>{
+
+let data=d.data()
+
+docs.push({
+id:d.id,
+name:data.name,
+score:data.score
+})
+
+if(!bestScores[data.name] || data.score>bestScores[data.name]){
+bestScores[data.name]=data.score
+}
+
+})
+
+for(let r of docs){
+
+if(bestScores[r.name]!==r.score){
+
+await deleteDoc(doc(db,"ranking",r.id))
+
+console.log("deleted duplicate",r.name,r.score)
+
+}
+
+}
+
+console.log("Ranking cleaned")
+
+}
+
+cleanRanking()
+
+</script>
+
+</body>
+</html>
