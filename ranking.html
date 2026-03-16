@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>PLC Training Game - World Ranking</title>
+
+<style>
+
+/* RESET */
+
+*{
+box-sizing:border-box;
+margin:0;
+padding:0;
+}
+
+/* BODY */
+
+body{
+background:radial-gradient(circle at center,#0b0f14,#000);
+color:#00ff7b;
+font-family:monospace;
+text-align:center;
+padding:40px 20px;
+min-height:100vh;
+overflow-x:hidden;
+}
+
+/* CRT EFFECT */
+
+body::after{
+content:"";
+position:fixed;
+top:0;
+left:0;
+width:100%;
+height:100%;
+background:linear-gradient(
+rgba(255,255,255,0.03) 50%,
+transparent 50%
+);
+background-size:100% 4px;
+pointer-events:none;
+}
+
+/* TITLE */
+
+h1{
+font-size:clamp(24px,4vw,38px);
+letter-spacing:3px;
+margin-bottom:10px;
+text-shadow:0 0 15px #00ff7b;
+}
+
+.subtitle{
+color:#aaa;
+margin-bottom:25px;
+font-size:clamp(12px,2vw,16px);
+}
+
+/* BUTTONS */
+
+.controls{
+position:fixed;
+top:15px;
+right:15px;
+display:flex;
+gap:10px;
+z-index:9999;
+}
+
+.controlBtn{
+
+background:#000;
+color:#00ff7b;
+
+border:2px solid #00ff7b;
+padding:8px 14px;
+
+border-radius:6px;
+cursor:pointer;
+
+box-shadow:0 0 10px #00ff7b;
+
+font-family:monospace;
+
+}
+
+/* CHAMPION */
+
+#champion{
+
+width:100%;
+max-width:500px;
+
+margin:auto;
+margin-bottom:20px;
+
+background:#000;
+border:3px solid gold;
+
+border-radius:12px;
+padding:18px;
+
+box-shadow:
+0 0 30px gold,
+inset 0 0 15px rgba(255,215,0,0.4);
+
+animation:champGlow 1.5s infinite alternate;
+
+}
+
+@keyframes champGlow{
+
+from{box-shadow:0 0 20px gold}
+to{box-shadow:0 0 40px gold}
+
+}
+
+.championTitle{
+font-size:13px;
+color:gold;
+margin-bottom:5px;
+}
+
+.championName{
+font-size:clamp(20px,3vw,28px);
+font-weight:bold;
+}
+
+.championScore{
+font-size:clamp(18px,3vw,24px);
+}
+
+/* RANKING PANEL */
+
+#ranking{
+
+width:100%;
+max-width:500px;
+
+margin:auto;
+
+background:#000;
+
+border:3px solid #00ff7b;
+
+border-radius:12px;
+
+padding:12px;
+
+box-shadow:
+0 0 30px #00ff7b,
+inset 0 0 15px rgba(0,255,120,0.2);
+
+height:clamp(280px,55vh,500px);
+
+overflow:hidden;
+
+}
+
+/* LIST */
+
+#rankingList{
+position:relative;
+width:100%;
+}
+
+/* ROW */
+
+.rank{
+
+display:flex;
+justify-content:space-between;
+align-items:center;
+
+padding:10px;
+
+margin:4px 0;
+
+border-bottom:1px solid #222;
+
+font-size:clamp(14px,2vw,18px);
+
+opacity:0;
+transform:translateY(10px);
+animation:rankIn .5s forwards;
+
+}
+
+@keyframes rankIn{
+to{
+opacity:1;
+transform:translateY(0);
+}
+}
+
+/* MEDALS */
+
+.rank1{
+color:gold;
+text-shadow:0 0 10px gold;
+}
+
+.rank2{
+color:silver;
+}
+
+.rank3{
+color:#cd7f32;
+}
+
+/* NAME */
+
+.name{
+flex:1;
+text-align:left;
+white-space:nowrap;
+overflow:hidden;
+text-overflow:ellipsis;
+}
+
+/* SCORE */
+
+.score{
+font-weight:bold;
+margin-left:10px;
+}
+
+/* FOOTER */
+
+.footer{
+margin-top:20px;
+font-size:clamp(11px,2vw,14px);
+color:#777;
+}
+
+/* MOBILE */
+
+@media (max-width:600px){
+
+body{
+padding:25px 12px;
+}
+
+#champion{
+padding:14px;
+}
+
+#ranking{
+padding:10px;
+}
+
+.rank{
+padding:8px;
+}
+
+}
+
+/* BIG SCREEN */
+
+@media (min-width:1400px){
+
+#ranking,
+#champion{
+max-width:600px;
+}
+
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="controls">
+<button id="soundToggle" class="controlBtn">🔊</button>
+<button id="fullscreenBtn" class="controlBtn">⛶</button>
+</div>
+
+<h1>🏆 PLC TRAINING GAME</h1>
+<div class="subtitle">WORLD RANKING</div>
+
+<div id="champion"></div>
+
+<div id="ranking">
+<div id="rankingList"></div>
+</div>
+
+<div class="footer">
+Ranking global en tiempo real
+</div>
+
+<audio id="music" src="sounds/arcade.mp3" loop></audio>
+<audio id="championSound" src="sounds/champion.mp3"></audio>
+
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
+import { getFirestore, collection, query, orderBy, limit, onSnapshot } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
+
+/* FIREBASE */
+
+const firebaseConfig={
+apiKey:"AIzaSyCHD_4dYcJjRYw1LvMm03iDLNyktjOgIR4",
+authDomain:"plc-training-game.firebaseapp.com",
+projectId:"plc-training-game",
+storageBucket:"plc-training-game.firebasestorage.app",
+messagingSenderId:"444769439771",
+appId:"1:444769439771:web:253d9651ebef96ab9ba8be"
+}
+
+const app=initializeApp(firebaseConfig)
+const db=getFirestore(app)
+
+/* SOUND */
+
+let soundEnabled=true
+
+const music=document.getElementById("music")
+const championSound=document.getElementById("championSound")
+
+function startMusic(){
+
+if(soundEnabled){
+music.volume=0.35
+music.play().catch(()=>{})
+}
+
+}
+
+document.addEventListener("click",startMusic,{once:true})
+document.addEventListener("keydown",startMusic,{once:true})
+document.addEventListener("touchstart",startMusic,{once:true})
+
+document.getElementById("soundToggle").onclick=()=>{
+
+soundEnabled=!soundEnabled
+
+document.getElementById("soundToggle").innerText=soundEnabled?"🔊":"🔇"
+
+if(soundEnabled){
+music.play().catch(()=>{})
+}else{
+music.pause()
+}
+
+}
+
+/* FULLSCREEN */
+
+document.getElementById("fullscreenBtn").onclick=()=>{
+
+if(!document.fullscreenElement){
+document.documentElement.requestFullscreen()
+}else{
+document.exitFullscreen()
+}
+
+}
+
+/* QUERY */
+
+const q=query(
+collection(db,"ranking"),
+orderBy("score","desc"),
+limit(20)
+)
+
+let currentChampion=""
+
+/* RENDER */
+
+onSnapshot(q,(snapshot)=>{
+
+let html=""
+let championHTML=""
+
+let i=0
+
+snapshot.forEach((doc)=>{
+
+let r=doc.data()
+
+if(i==0){
+
+championHTML=`
+<div class="championTitle">👑 PLC MASTER</div>
+<div class="championName">${r.name}</div>
+<div class="championScore">${r.score}</div>
+`
+
+if(currentChampion!==r.name){
+
+currentChampion=r.name
+
+document.getElementById("champion").style.transform="scale(1.1)"
+
+setTimeout(()=>{
+document.getElementById("champion").style.transform="scale(1)"
+},400)
+
+if(soundEnabled){
+championSound.currentTime=0
+championSound.play().catch(()=>{})
+}
+
+}
+
+}
+
+let medal=""
+let cls="rank"
+
+if(i==0){medal="🥇";cls+=" rank1"}
+else if(i==1){medal="🥈";cls+=" rank2"}
+else if(i==2){medal="🥉";cls+=" rank3"}
+else{medal=(i+1)+"."}
+
+html+=`
+<div class="${cls}" style="animation-delay:${i*0.08}s">
+<span class="name">${medal} ${r.name}</span>
+<span class="score">${r.score}</span>
+</div>
+`
+
+i++
+
+})
+
+document.getElementById("rankingList").innerHTML=html
+document.getElementById("champion").innerHTML=championHTML
+
+})
+
+/* SMOOTH ARCADE SCROLL */
+
+let scroll=0
+
+function autoScroll(){
+
+const list=document.getElementById("rankingList")
+const container=document.getElementById("ranking")
+
+const maxScroll=list.scrollHeight-container.clientHeight
+
+scroll+=0.35
+
+if(scroll>maxScroll){
+scroll=0
+}
+
+list.style.transform=`translateY(${-scroll}px)`
+
+requestAnimationFrame(autoScroll)
+
+}
+
+autoScroll()
+
+</script>
+
+</body>
+</html>
