@@ -259,6 +259,7 @@ playSequence(index+1)
 
 },randomSpeed)
 
+}  
 /* INPUT */
 
 function pulse(i){
